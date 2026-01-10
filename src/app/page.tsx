@@ -81,7 +81,7 @@ export default function DailyTodoApp() {
                   checked={todo.done}
                   onCheckedChange={() => toggleTodo(i)}
                 />
-                <span className={`text-3xl flex-1 font-(family-name:--font-just-another-hand) ${todo.done ? 'line-through opacity-60' : ''}`}>
+                <span className={`text-3xl flex-1 font-(family-name:--font-tillana) ${todo.done ? 'line-through opacity-60' : ''}`}>
                   {todo.text}
                 </span>
                 <Button

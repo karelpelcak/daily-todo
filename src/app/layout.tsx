@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Just_Another_Hand } from "next/font/google";
+import { Geist, Geist_Mono, Tillana } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,9 +12,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const justAnotherHand = Just_Another_Hand({
+const tillana = Tillana({
   weight: "400",
-  variable: "--font-just-another-hand",
+  variable: "--font-tillana",
   subsets: ["latin"],
 });
 
@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${justAnotherHand.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${tillana.variable} antialiased`}
       >
         {children}
       </body>
