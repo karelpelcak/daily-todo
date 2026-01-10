@@ -1,65 +1,107 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface Todo {
+  text: string;
+  done: boolean;
+}
+
+export default function DailyTodoApp() {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [input, setInput] = useState("");
+  const [shakeId, setShakeId] = useState<number | null>(null);
+
+  const todayKey = `daily-todo-${new Date().toISOString().slice(0, 10)}`;
+
+  useEffect(() => {
+    const stored = localStorage.getItem(todayKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.length > 0 && typeof parsed[0] === 'string') {
+        setTodos(parsed.map((text: string) => ({ text, done: false })));
+      } else {
+        setTodos(parsed);
+      }
+    }
+  }, [todayKey]);
+
+  useEffect(() => {
+    localStorage.setItem(todayKey, JSON.stringify(todos));
+  }, [todos, todayKey]);
+
+  const addTodo = () => {
+    if (!input.trim()) return;
+    setTodos([...todos, { text: input.trim(), done: false }]);
+    setInput("");
+  };
+
+  const toggleTodo = (index: number) => {
+    const newTodos = [...todos];
+    newTodos[index].done = !newTodos[index].done;
+    setTodos(newTodos);
+    setShakeId(index);
+    setTimeout(() => setShakeId(null), 400);
+  };
+
+  const removeTodo = (index: number) => {
+    setTodos(todos.filter((_, i) => i !== index));
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen flex justify-center bg-muted p-4">
+      <Card className="w-full rounded-2xl shadow-md">
+        <CardContent className="p-6 space-y-4">
+          <h1 className="text-xl font-semibold">Daily Todo</h1>
+          <p className="text-sm text-muted-foreground">
+            {new Date().toLocaleDateString("en-US")}
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+          <div className="flex gap-2">
+            <Input
+              placeholder="What do you want to do today?"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addTodo()}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <Button onClick={addTodo}>Add</Button>
+          </div>
+
+          <ul className="space-y-2">
+            {todos.map((todo, i) => (
+              <li
+                key={i}
+                className={`flex items-center gap-3 rounded-xl bg-background px-3 py-2 shadow-sm ${shakeId === i ? 'shake' : ''}`}
+              >
+                <Checkbox
+                  checked={todo.done}
+                  onCheckedChange={() => toggleTodo(i)}
+                />
+                <span className={`text-3xl flex-1 font-(family-name:--font-just-another-hand) ${todo.done ? 'line-through opacity-60' : ''}`}>
+                  {todo.text}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeTodo(i)}
+                >
+                  ✕
+                </Button>
+              </li>
+            ))}
+          </ul>
+
+          {todos.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center">
+              No tasks yet. Add one above!
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </main>
   );
 }
