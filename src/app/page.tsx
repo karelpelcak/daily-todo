@@ -3,105 +3,156 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
+import { getTasks, updateTaskStatus } from "@/lib/api";
+import { NewTaskDialog } from "@/components/NewTaskDialog";
+import { TaskDetailDialog } from "@/components/TaskDetailDialog";
 
-interface Todo {
-  text: string;
-  done: boolean;
+interface Task {
+  id: number;
+  title: string;
+  description?: string | null;
+  isFinished: boolean;
+  createdAt?: string;
 }
 
 export default function DailyTodoApp() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [input, setInput] = useState("");
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [shakeId, setShakeId] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const { logout, isLoading } = useAuth();
 
-  const todayKey = `daily-todo-${new Date().toISOString().slice(0, 10)}`;
-
-  useEffect(() => {
-    const stored = localStorage.getItem(todayKey);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.length > 0 && typeof parsed[0] === 'string') {
-        setTodos(parsed.map((text: string) => ({ text, done: false })));
-      } else {
-        setTodos(parsed);
-      }
+  const loadTasks = async () => {
+    try {
+      setError("");
+      const fetchedTasks = await getTasks();
+      setTasks(fetchedTasks);
+    } catch (err) {
+      setError("Nepodařilo se načíst úkoly");
+      console.error(err);
     }
-  }, [todayKey]);
+  };
 
   useEffect(() => {
-    localStorage.setItem(todayKey, JSON.stringify(todos));
-  }, [todos, todayKey]);
+    loadTasks();
+  }, []);
 
-  const addTodo = () => {
-    if (!input.trim()) return;
-    setTodos([...todos, { text: input.trim(), done: false }]);
-    setInput("");
+  const handleTaskCreated = (newTask: Task) => {
+    setTasks([...tasks, newTask]);
   };
 
-  const toggleTodo = (index: number) => {
-    const newTodos = [...todos];
-    newTodos[index].done = !newTodos[index].done;
-    setTodos(newTodos);
-    setShakeId(index);
-    setTimeout(() => setShakeId(null), 400);
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks(tasks.map(task =>
+      task.id === updatedTask.id ? updatedTask : task
+    ));
   };
 
-  const removeTodo = (index: number) => {
-    setTodos(todos.filter((_, i) => i !== index));
+  const handleTaskDeleted = (taskId: number) => {
+    setTasks(tasks.filter(task => task.id !== taskId));
   };
+
+  const toggleTodo = async (taskId: number, currentStatus: boolean) => {
+    try {
+      setError("");
+      await updateTaskStatus(taskId, !currentStatus);
+      setTasks(tasks.map(task =>
+        task.id === taskId ? { ...task, isFinished: !currentStatus } : task
+      ));
+      setShakeId(taskId);
+      setTimeout(() => setShakeId(null), 400);
+    } catch (err) {
+      setError("Nepodařilo se aktualizovat úkol");
+      console.error(err);
+    }
+  };
+
+  const handleTaskClick = (taskId: number) => {
+    setSelectedTaskId(taskId);
+  };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen flex justify-center items-center bg-muted">
+        <p>Načítám...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex justify-center bg-muted p-4">
       <Card className="w-full rounded-2xl shadow-md">
         <CardContent className="p-6 space-y-4">
-          <h1 className="text-xl font-semibold">Daily Todo</h1>
+          <div className="flex justify-between items-center">
+            <h1 className="text-xl font-semibold">Daily Todo</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={logout}
+            >
+              Odhlásit se
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString("en-US")}
+            {new Date().toLocaleDateString("cs-CZ")}
           </p>
 
-          <div className="flex gap-2">
-            <Input
-              placeholder="What do you want to do today?"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addTodo()}
-            />
-            <Button onClick={addTodo}>Add</Button>
-          </div>
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+
+          <Button
+            onClick={() => setIsNewTaskDialogOpen(true)}
+            className="w-full"
+          >
+            + Přidat nový úkol
+          </Button>
 
           <ul className="space-y-2">
-            {todos.map((todo, i) => (
+            {tasks.map((task) => (
               <li
-                key={i}
-                className={`flex items-center gap-3 rounded-xl bg-background px-3 py-2 shadow-sm ${shakeId === i ? 'shake' : ''}`}
+                key={task.id}
+                className={`flex items-center gap-3 rounded-xl bg-background px-3 py-2 shadow-sm ${shakeId === task.id ? 'shake' : ''}`}
               >
                 <Checkbox
-                  checked={todo.done}
-                  onCheckedChange={() => toggleTodo(i)}
+                  checked={task.isFinished}
+                  onCheckedChange={() => toggleTodo(task.id, task.isFinished)}
                 />
-                <span className={`text-3xl flex-1 font-(family-name:--font-tillana) ${todo.done ? 'line-through opacity-60' : ''}`}>
-                  {todo.text}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeTodo(i)}
+                <span
+                  className={`text-3xl flex-1 font-(family-name:--font-tillana) cursor-pointer ${task.isFinished ? 'line-through opacity-60' : ''}`}
+                  onClick={() => handleTaskClick(task.id)}
                 >
-                  ✕
-                </Button>
+                  {task.title}
+                </span>
               </li>
             ))}
           </ul>
 
-          {todos.length === 0 && (
+          {tasks.length === 0 && (
             <p className="text-sm text-muted-foreground text-center">
               No tasks yet. Add one above!
             </p>
           )}
         </CardContent>
       </Card>
+
+      <NewTaskDialog
+        open={isNewTaskDialogOpen}
+        onOpenChange={setIsNewTaskDialogOpen}
+        onTaskCreated={handleTaskCreated}
+      />
+
+      <TaskDetailDialog
+        taskId={selectedTaskId}
+        open={selectedTaskId !== null}
+        onOpenChange={(open) => !open && setSelectedTaskId(null)}
+        onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
+      />
     </main>
   );
 }
