@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getTasks, updateTaskStatus } from "@/lib/api";
 import { NewTaskDialog } from "@/components/NewTaskDialog";
 import { TaskDetailDialog } from "@/components/TaskDetailDialog";
+import SyncButton from "@/components/SyncButton";
+import { Plus } from "lucide-react";
 
 interface Task {
   id: number;
@@ -105,12 +107,16 @@ export default function DailyTodoApp() {
             </div>
           )}
 
-          <Button
-            onClick={() => setIsNewTaskDialogOpen(true)}
-            className="w-full"
-          >
-            + Přidat nový úkol
-          </Button>
+          <div className="w-full flex justify-between">
+            <Button
+              onClick={() => setIsNewTaskDialogOpen(true)}
+              className="w-18/20"
+            >
+              <Plus />
+              Přidat nový úkol
+            </Button>
+            <SyncButton className="w-1/20" onSync={loadTasks} />
+          </div>
 
           <ul className="space-y-2">
             {tasks.map((task) => (
