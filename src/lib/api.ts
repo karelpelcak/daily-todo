@@ -1,6 +1,7 @@
 import { getAuthToken } from './auth';
 
-const API_BASE_URL = 'https://daily-todo-api.gryvdycz.workers.dev';
+// const API_BASE_URL = 'https://daily-todo-api.gryvdycz.workers.dev';
+const API_BASE_URL = 'http://127.0.0.1:8787';
 
 interface Task {
     id: number;
